@@ -37,7 +37,7 @@
 
         buildInputs = [pkgs.libcec pkgs.libcec_platform];
 
-        vendorSha256 = "sha256-uwDYmjnYATjVchT6Y7KOeS4ebkPtpoEznXlBG7ASlSQ=";
+        vendorSha256 = "sha256-DZ0X9hyuFw9F6K6ikru/04fNATNsNNYO/d8ZKeMMtaU=";
       };
     });
 

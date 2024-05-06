@@ -6,7 +6,7 @@ import (
 	"os"
 	"os/signal"
 
-	cec "github.com/chbmuc/cec"
+	cec "github.com/claes/cec"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
@@ -15,20 +15,23 @@ var debug *bool
 type CecMQTTBridge struct {
 	MQTTClient    mqtt.Client
 	CECConnection *cec.Connection
-	// CEC client
 }
 
 func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTTBridge {
 
-	cecConnection, err := cec.Open(cecName, cecDeviceName, true)
+	fmt.Printf("Initializing CEC connection: %s %s: \n", cecName, cecDeviceName)
+
+	cecConnection, err := cec.Open(cecName, cecDeviceName)
 	if err != nil {
 		fmt.Printf("Could not connect to CEC device %s %s, %v\n", cecName, cecDeviceName, err)
 		panic(err)
 	}
 
+	fmt.Printf("CEC connection opened")
 	cecDevices := cecConnection.List()
 	for key, value := range cecDevices {
-		fmt.Printf("%s: %s\n", key, value)
+		fmt.Printf("   %s: %v\n", key, value)
+		fmt.Printf("A  %s: %v\n", key, value.ActiveSource)
 	}
 
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
@@ -126,8 +129,8 @@ func printHelp() {
 }
 
 func main() {
-	cecName := flag.String("cecName", "", "CEC name")
-	cecDeviceName := flag.String("cecDeviceName", "", "CEC device name")
+	cecName := flag.String("cecName", "/dev/ttyACM0", "CEC name")
+	cecDeviceName := flag.String("cecDeviceName", "Claes", "CEC device name")
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
@@ -147,6 +150,13 @@ func main() {
 	// 	}
 	// }()
 
+	go func() {
+		fmt.Printf("Printing keypresses\n")
+		for keyPress := range bridge.CECConnection.KeyPresses {
+			fmt.Printf("KeyPress: %v \n", keyPress)
+		}
+	}()
+
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -154,6 +164,7 @@ func main() {
 	go bridge.MainLoop()
 	<-c
 	// bridge.Controller.Close()
+	bridge.CECConnection.Destroy()
 	fmt.Printf("Shut down\n")
 
 	os.Exit(0)
