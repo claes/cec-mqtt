@@ -28,9 +28,6 @@ func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTT
 		panic(err)
 	}
 
-	//fmt.Printf("Set active source\n")
-	//cecConnection.SetActiveSource(1)
-
 	fmt.Printf("CEC connection opened\n")
 
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
@@ -47,71 +44,8 @@ func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTT
 		CECConnection: cecConnection,
 	}
 
-	// funcs := map[string]func(client mqtt.Client, message mqtt.Message){
-	// 	"samsungremote/key/send":          bridge.onKeySend,
-	// 	"samsungremote/key/reconnectsend": bridge.onKeyReconnectSend,
-	// }
-	// for key, function := range funcs {
-	// 	token := client.Subscribe(key, 0, function)
-	// 	token.Wait()
-	// }
-	// time.Sleep(2 * time.Second)
 	return bridge
 }
-
-// var reconnectSamsungTV = false
-
-// func (bridge *SamsungRemoteMQTTBridge) reconnectIfNeeded() {
-// 	if reconnectSamsungTV {
-// 		err := bridge.Controller.Connect(bridge.NetworkInfo, bridge.TVInfo)
-// 		if *debug {
-// 			if err != nil {
-// 				fmt.Printf("Could not reconnect, %v\n", err)
-// 			} else {
-// 				fmt.Printf("Reconnection successful\n")
-// 				reconnectSamsungTV = false
-// 			}
-// 		}
-// 	}
-// }
-
-// var sendMutex sync.Mutex
-
-// func (bridge *SamsungRemoteMQTTBridge) onKeySend(client mqtt.Client, message mqtt.Message) {
-// 	sendMutex.Lock()
-// 	defer sendMutex.Unlock()
-
-// 	command := string(message.Payload())
-// 	if command != "" {
-// 		bridge.PublishMQTT("samsungremote/key/send", "", false)
-// 		if *debug {
-// 			fmt.Printf("Sending key %s\n", command)
-// 		}
-// 		err := bridge.Controller.SendKey(bridge.NetworkInfo, bridge.TVInfo, command)
-// 		if err != nil {
-// 			if *debug {
-// 				fmt.Printf("Error while sending key, attempt reconnect\n")
-// 			}
-// 			reconnectSamsungTV = true
-// 		}
-// 	}
-// }
-
-// func (bridge *SamsungRemoteMQTTBridge) onKeyReconnectSend(client mqtt.Client, message mqtt.Message) {
-// 	sendMutex.Lock()
-// 	defer sendMutex.Unlock()
-
-// 	command := string(message.Payload())
-// 	if command != "" {
-// 		bridge.PublishMQTT("samsungremote/key/reconnectsend", "", false)
-// 		if *debug {
-// 			fmt.Printf("Sending key %s\n", command)
-// 		}
-// 		reconnectSamsungTV = true
-// 		bridge.reconnectIfNeeded()
-// 		bridge.Controller.SendKey(bridge.NetworkInfo, bridge.TVInfo, command)
-// 	}
-// }
 
 func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained bool) {
 	token := bridge.MQTTClient.Publish(topic, 0, retained, message)
@@ -164,9 +98,16 @@ func main() {
 	// }()
 
 	go func() {
-		fmt.Printf("Printing keypresses\n")
+		bridge.CECConnection.KeyPresses = make(chan int, 10) // Buffered channel
 		for keyPress := range bridge.CECConnection.KeyPresses {
-			fmt.Printf("KeyPress: %v \n", keyPress)
+			fmt.Printf("Key press: %v \n", keyPress)
+		}
+	}()
+
+	go func() {
+		bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
+		for sourceActivation := range bridge.CECConnection.SourceActivations {
+			fmt.Printf("Source activation: %v %v\n", sourceActivation.LogicalAddress, sourceActivation.State)
 		}
 	}()
 
