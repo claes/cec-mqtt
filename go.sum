@@ -26,6 +26,8 @@ github.com/claes/cec v0.0.0-20240512134355-ee4a7715f588 h1:PMCae353J6rgnVJ6SepB1
 github.com/claes/cec v0.0.0-20240512134355-ee4a7715f588/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/claes/cec v0.0.0-20240512164441-2a8e0d2e17c8 h1:ivMwFy3YkMaJuLNfsFG9AowdWdnFjcQH6RPHZYHiU3M=
 github.com/claes/cec v0.0.0-20240512164441-2a8e0d2e17c8/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240512185359-b221da0cc59c h1:aqhy1vZzGnu/zzLyYrVDQipcAQ3jpuD1CNEeYEAsD44=
+github.com/claes/cec v0.0.0-20240512185359-b221da0cc59c/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/eclipse/paho.mqtt.golang v1.4.3 h1:2kwcUGn8seMUfWndX0hGbvH8r7crgcJguQNCyp70xik=
 github.com/eclipse/paho.mqtt.golang v1.4.3/go.mod h1:CSYvoAlsMkhYOXh/oKyxa8EcBci6dVkLCbo5tTC1RIE=
 github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
