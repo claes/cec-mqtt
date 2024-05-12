@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"time"
 
 	cec "github.com/claes/cec"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -27,12 +28,10 @@ func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTT
 		panic(err)
 	}
 
-	fmt.Printf("CEC connection opened")
-	cecDevices := cecConnection.List()
-	for key, value := range cecDevices {
-		fmt.Printf("   %s: %v\n", key, value)
-		fmt.Printf("A  %s: %v\n", key, value.ActiveSource)
-	}
+	//fmt.Printf("Set active source\n")
+	//cecConnection.SetActiveSource(1)
+
+	fmt.Printf("CEC connection opened\n")
 
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
 	client := mqtt.NewClient(opts)
@@ -120,6 +119,20 @@ func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained 
 }
 
 func (bridge *CecMQTTBridge) MainLoop() {
+	//fmt.Printf("Set active source\n")
+	//bridge.CECConnection.SetActiveSource(1)
+	for {
+		time.Sleep(10 * time.Second)
+		fmt.Printf("List sources again\n")
+		cecDevices := bridge.CECConnection.List()
+		for key, value := range cecDevices {
+			fmt.Printf("   %s: Active source %v, Logical Adress %v, OSD name %v, Physical Adress %v, Power %v, Vendor %v\n", key, value.ActiveSource,
+				value.LogicalAddress, value.OSDName, value.PhysicalAddress, value.PowerStatus, value.Vendor)
+		}
+		time.Sleep(10 * time.Second)
+		//fmt.Printf("Rescan devices\n")
+		//bridge.CECConnection.RescanDevices()
+	}
 }
 
 func printHelp() {
@@ -164,8 +177,10 @@ func main() {
 	go bridge.MainLoop()
 	<-c
 	// bridge.Controller.Close()
-	bridge.CECConnection.Destroy()
+
 	fmt.Printf("Shut down\n")
+	bridge.CECConnection.Destroy()
+	fmt.Printf("Exit\n")
 
 	os.Exit(0)
 }

@@ -2,7 +2,7 @@
   description = "CEC-MQTT";
 
   # Nixpkgs / NixOS version to use.
-  inputs.nixpkgs.url = "nixpkgs/nixos-23.05";
+  inputs.nixpkgs.url = "nixpkgs/nixos-23.11";
 
   outputs = {
     self,
@@ -37,7 +37,7 @@
 
         buildInputs = [pkgs.libcec pkgs.libcec_platform];
 
-        vendorSha256 = "sha256-DZ0X9hyuFw9F6K6ikru/04fNATNsNNYO/d8ZKeMMtaU=";
+        vendorHash = "sha256-EHNqGyuPzSl/BSxk8yRvLXdz8CWIJKIDOxtiGxk8aNo=";
       };
     });
 
