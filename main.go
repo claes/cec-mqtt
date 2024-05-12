@@ -90,12 +90,12 @@ func main() {
 
 	bridge := NewCecMQTTBridge(*cecName, *cecDeviceName, *mqttBroker)
 
-	// go func() {
-	// 	for {
-	// 		time.Sleep(8 * time.Second)
-	// 		bridge.reconnectIfNeeded()
-	// 	}
-	// }()
+	go func() {
+		bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
+		for command := range bridge.CECConnection.Commands {
+			fmt.Printf("Command: %v \n", command.Operation)
+		}
+	}()
 
 	go func() {
 		bridge.CECConnection.KeyPresses = make(chan int, 10) // Buffered channel
