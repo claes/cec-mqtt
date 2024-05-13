@@ -3,9 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
-	"time"
+	"strconv"
 
 	cec "github.com/claes/cec"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -43,8 +44,28 @@ func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTT
 		MQTTClient:    client,
 		CECConnection: cecConnection,
 	}
-
+	bridge.initialize()
 	return bridge
+}
+
+func (bridge *CecMQTTBridge) initialize() {
+	cecDevices := bridge.CECConnection.List()
+	for key, value := range cecDevices {
+		slog.Info("Connected device",
+			"key", key,
+			"activeSource", value.ActiveSource,
+			"logicalAddress", value.LogicalAddress,
+			"osdName", value.OSDName,
+			"physicalAddress", value.PhysicalAddress,
+			"powerStatus", value.PowerStatus,
+			"vendor", value.Vendor)
+		bridge.PublishMQTT("cec/source/"+strconv.Itoa(value.LogicalAddress)+"/active",
+			strconv.FormatBool(value.ActiveSource), true)
+		bridge.PublishMQTT("cec/source/"+strconv.Itoa(value.LogicalAddress)+"/name",
+			value.OSDName, true)
+		bridge.PublishMQTT("cec/source/"+strconv.Itoa(value.LogicalAddress)+"/power",
+			value.PowerStatus, true)
+	}
 }
 
 func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained bool) {
@@ -53,20 +74,6 @@ func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained 
 }
 
 func (bridge *CecMQTTBridge) MainLoop() {
-	//fmt.Printf("Set active source\n")
-	//bridge.CECConnection.SetActiveSource(1)
-	for {
-		time.Sleep(10 * time.Second)
-		fmt.Printf("List sources again\n")
-		cecDevices := bridge.CECConnection.List()
-		for key, value := range cecDevices {
-			fmt.Printf("   %s: Active source %v, Logical Adress %v, OSD name %v, Physical Adress %v, Power %v, Vendor %v\n", key, value.ActiveSource,
-				value.LogicalAddress, value.OSDName, value.PhysicalAddress, value.PowerStatus, value.Vendor)
-		}
-		time.Sleep(10 * time.Second)
-		//fmt.Printf("Rescan devices\n")
-		//bridge.CECConnection.RescanDevices()
-	}
 }
 
 func printHelp() {
@@ -101,6 +108,7 @@ func main() {
 		bridge.CECConnection.KeyPresses = make(chan int, 10) // Buffered channel
 		for keyPress := range bridge.CECConnection.KeyPresses {
 			fmt.Printf("Key press: %v \n", keyPress)
+			bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress), false)
 		}
 	}()
 
@@ -108,6 +116,8 @@ func main() {
 		bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
 		for sourceActivation := range bridge.CECConnection.SourceActivations {
 			fmt.Printf("Source activation: %v %v\n", sourceActivation.LogicalAddress, sourceActivation.State)
+			bridge.PublishMQTT("cec/source/"+strconv.Itoa(sourceActivation.LogicalAddress)+"/active",
+				strconv.FormatBool(sourceActivation.State), true)
 		}
 	}()
 
