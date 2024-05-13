@@ -90,6 +90,13 @@ func main() {
 	debug = flag.Bool("debug", false, "Debug logging")
 	flag.Parse()
 
+	if *debug {
+		var programLevel = new(slog.LevelVar)
+		programLevel.Set(slog.LevelDebug)
+		handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+		slog.SetDefault(slog.New(handler))
+	}
+
 	if *help {
 		printHelp()
 		os.Exit(0)
@@ -101,6 +108,13 @@ func main() {
 		bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
 		for command := range bridge.CECConnection.Commands {
 			fmt.Printf("Command: %v \n", command.Operation)
+		}
+	}()
+
+	go func() {
+		bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
+		for message := range bridge.CECConnection.Messages {
+			fmt.Printf("Message : %v \n", message)
 		}
 	}()
 
