@@ -3,13 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	cec "github.com/claes/cec"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"log/slog"
 	"os"
 	"os/signal"
 	"strconv"
-
-	cec "github.com/claes/cec"
-	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 var debug *bool
@@ -107,22 +106,25 @@ func main() {
 	go func() {
 		bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
 		for command := range bridge.CECConnection.Commands {
-			fmt.Printf("Command: %v \n", command.Operation)
+			fmt.Printf("Create command %s \n", command.CommandString)
+			bridge.PublishMQTT("cec/command", command.CommandString, false)
 		}
 	}()
 
 	go func() {
-		bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
-		for message := range bridge.CECConnection.Messages {
-			fmt.Printf("Message : %v \n", message)
-		}
+		// bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
+		//		for message := range bridge.CECConnection.Messages {
+		//			fmt.Printf("Message : %v \n", message)
+		//		}
 	}()
 
 	go func() {
-		bridge.CECConnection.KeyPresses = make(chan int, 10) // Buffered channel
+		bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 10) // Buffered channel
 		for keyPress := range bridge.CECConnection.KeyPresses {
-			fmt.Printf("Key press: %v \n", keyPress)
-			bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress), false)
+			fmt.Printf("Key press: %v %d\n", keyPress.KeyCode, keyPress.Duration)
+			if keyPress.Duration == 0 {
+				bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress.KeyCode), false)
+			}
 		}
 	}()
 

@@ -28,6 +28,14 @@ github.com/claes/cec v0.0.0-20240512164441-2a8e0d2e17c8 h1:ivMwFy3YkMaJuLNfsFG9A
 github.com/claes/cec v0.0.0-20240512164441-2a8e0d2e17c8/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/claes/cec v0.0.0-20240512185359-b221da0cc59c h1:aqhy1vZzGnu/zzLyYrVDQipcAQ3jpuD1CNEeYEAsD44=
 github.com/claes/cec v0.0.0-20240512185359-b221da0cc59c/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240514162557-32820a824a09 h1:osRdGP8B02O1wJO7qdPWN6ku28dJ+bag+B2jZq39zUM=
+github.com/claes/cec v0.0.0-20240514162557-32820a824a09/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240515161318-bf2af0667e7b h1:CL37UOlR47B7ZIQZpYXJ1izDCib6yoToQhkdyIf/VbU=
+github.com/claes/cec v0.0.0-20240515161318-bf2af0667e7b/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240515162702-117bda15511f h1:Dg6a/wmHv4/vJdOVbsex+IxVy/REu3URey9d4y/GEQo=
+github.com/claes/cec v0.0.0-20240515162702-117bda15511f/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240515193116-973cbc5c5117 h1:tUk+CPVo1a9qcAGxMLAMP4UFltt8f9PEjwhHkMrmtao=
+github.com/claes/cec v0.0.0-20240515193116-973cbc5c5117/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/eclipse/paho.mqtt.golang v1.4.3 h1:2kwcUGn8seMUfWndX0hGbvH8r7crgcJguQNCyp70xik=
 github.com/eclipse/paho.mqtt.golang v1.4.3/go.mod h1:CSYvoAlsMkhYOXh/oKyxa8EcBci6dVkLCbo5tTC1RIE=
 github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
