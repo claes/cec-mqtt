@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"time"
 )
 
 var debug *bool
@@ -18,29 +19,36 @@ type CecMQTTBridge struct {
 	CECConnection *cec.Connection
 }
 
-func NewCecMQTTBridge(cecName, cecDeviceName string, mqttBroker string) *CecMQTTBridge {
-
-	fmt.Printf("Initializing CEC connection: %s %s: \n", cecName, cecDeviceName)
+func CreateCECConnection(cecName, cecDeviceName string) *cec.Connection {
+	slog.Info("Initializing CEC connection", "cecName", cecName, "cecDeviceName", cecDeviceName)
 
 	cecConnection, err := cec.Open(cecName, cecDeviceName)
 	if err != nil {
-		fmt.Printf("Could not connect to CEC device %s %s, %v\n", cecName, cecDeviceName, err)
+		slog.Error("Could not connect to CEC device",
+			"cecName", cecName, "cecDeviceName", cecDeviceName, "error", err)
 		panic(err)
 	}
 
-	fmt.Printf("CEC connection opened\n")
+	slog.Info("CEC connection opened")
+	return cecConnection
+}
 
+func CreateMQTTClient(mqttBroker string) mqtt.Client {
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
-		fmt.Printf("Could not connect to broker %s, %v\n", mqttBroker, token.Error())
+		slog.Error("Could not connect to broker", "mqttBroker", mqttBroker, "error", token.Error())
 		panic(token.Error())
 	} else if *debug {
-		fmt.Printf("Connected to MQTT broker: %s\n", mqttBroker)
+		slog.Debug("Connected to MQTT broker", "mqttBroker", mqttBroker)
 	}
+	return client
+}
+
+func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *CecMQTTBridge {
 
 	bridge := &CecMQTTBridge{
-		MQTTClient:    client,
+		MQTTClient:    mqttClient,
 		CECConnection: cecConnection,
 	}
 	bridge.initialize()
@@ -72,7 +80,51 @@ func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained 
 	token.Wait()
 }
 
+func (bridge *CecMQTTBridge) publishCommand() {
+	bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
+	for command := range bridge.CECConnection.Commands {
+		slog.Debug("Create command", "command", command.CommandString)
+		bridge.PublishMQTT("cec/command", command.CommandString, false)
+	}
+}
+
+func (bridge *CecMQTTBridge) publishKeyPress() {
+	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 10) // Buffered channel
+	for keyPress := range bridge.CECConnection.KeyPresses {
+		slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+		if keyPress.Duration == 0 {
+			bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress.KeyCode), false)
+		}
+	}
+}
+
+func (bridge *CecMQTTBridge) publishSourceActivation() {
+	bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
+	for sourceActivation := range bridge.CECConnection.SourceActivations {
+		slog.Debug("Source activation",
+			"logicalAddress", sourceActivation.LogicalAddress,
+			"state", sourceActivation.State)
+		bridge.PublishMQTT("cec/source/"+strconv.Itoa(sourceActivation.LogicalAddress)+"/active",
+			strconv.FormatBool(sourceActivation.State), true)
+	}
+}
+
+func (bridge *CecMQTTBridge) publishMessage(logOnly bool) {
+	bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
+	for message := range bridge.CECConnection.Messages {
+		slog.Debug("Message", "message", message)
+		if !logOnly {
+			bridge.PublishMQTT("cec/message", message, false)
+		}
+	}
+}
+
 func (bridge *CecMQTTBridge) MainLoop() {
+	for {
+		time.Sleep(10 * time.Second)
+		bridge.CECConnection.Transmit("10:8F")
+		time.Sleep(10 * time.Second)
+	}
 }
 
 func printHelp() {
@@ -83,7 +135,7 @@ func printHelp() {
 
 func main() {
 	cecName := flag.String("cecName", "/dev/ttyACM0", "CEC name")
-	cecDeviceName := flag.String("cecDeviceName", "Claes", "CEC device name")
+	cecDeviceName := flag.String("cecDeviceName", "CEC-MQTT", "CEC device name")
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
@@ -101,53 +153,25 @@ func main() {
 		os.Exit(0)
 	}
 
-	bridge := NewCecMQTTBridge(*cecName, *cecDeviceName, *mqttBroker)
+	bridge := NewCecMQTTBridge(CreateCECConnection(*cecName, *cecDeviceName),
+		CreateMQTTClient(*mqttBroker))
 
-	go func() {
-		bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
-		for command := range bridge.CECConnection.Commands {
-			fmt.Printf("Create command %s \n", command.CommandString)
-			bridge.PublishMQTT("cec/command", command.CommandString, false)
-		}
-	}()
-
-	go func() {
-		// bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
-		//		for message := range bridge.CECConnection.Messages {
-		//			fmt.Printf("Message : %v \n", message)
-		//		}
-	}()
-
-	go func() {
-		bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 10) // Buffered channel
-		for keyPress := range bridge.CECConnection.KeyPresses {
-			fmt.Printf("Key press: %v %d\n", keyPress.KeyCode, keyPress.Duration)
-			if keyPress.Duration == 0 {
-				bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress.KeyCode), false)
-			}
-		}
-	}()
-
-	go func() {
-		bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
-		for sourceActivation := range bridge.CECConnection.SourceActivations {
-			fmt.Printf("Source activation: %v %v\n", sourceActivation.LogicalAddress, sourceActivation.State)
-			bridge.PublishMQTT("cec/source/"+strconv.Itoa(sourceActivation.LogicalAddress)+"/active",
-				strconv.FormatBool(sourceActivation.State), true)
-		}
-	}()
+	go bridge.publishCommand()
+	go bridge.publishKeyPress()
+	go bridge.publishSourceActivation()
+	go bridge.publishMessage(true)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	fmt.Printf("Started\n")
+	slog.Info("Started")
 	go bridge.MainLoop()
 	<-c
 	// bridge.Controller.Close()
 
-	fmt.Printf("Shut down\n")
+	slog.Info("Shut down")
 	bridge.CECConnection.Destroy()
-	fmt.Printf("Exit\n")
+	slog.Info("Exit")
 
 	os.Exit(0)
 }
