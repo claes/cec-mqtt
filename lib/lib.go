@@ -30,24 +30,26 @@ func CreateCECConnection(cecName, cecDeviceName string) *cec.Connection {
 }
 
 func CreateMQTTClient(mqttBroker string) mqtt.Client {
+	slog.Info("Creating MQTT client", "broker", mqttBroker)
 	opts := mqtt.NewClientOptions().AddBroker(mqttBroker)
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		slog.Error("Could not connect to broker", "mqttBroker", mqttBroker, "error", token.Error())
 		panic(token.Error())
-	} else if *debug {
-		slog.Debug("Connected to MQTT broker", "mqttBroker", mqttBroker)
 	}
+	slog.Info("Connected to MQTT broker", "mqttBroker", mqttBroker)
 	return client
 }
 
 func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *CecMQTTBridge {
 
+	slog.Info("Creating CEC MQTT bridge")
 	bridge := &CecMQTTBridge{
 		MQTTClient:    mqttClient,
 		CECConnection: cecConnection,
 	}
 	bridge.initialize()
+	slog.Info("CEC MQTT bridge initialized")
 	return bridge
 }
 
