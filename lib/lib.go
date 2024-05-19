@@ -2,6 +2,7 @@ package lib
 
 import (
 	"log/slog"
+	"regexp"
 	"strconv"
 
 	cec "github.com/claes/cec"
@@ -108,11 +109,29 @@ func (bridge *CecMQTTBridge) PublishSourceActivations() {
 }
 
 func (bridge *CecMQTTBridge) PublishMessages(logOnly bool) {
+	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
+	regex, err := regexp.Compile(pattern)
+	if err != nil {
+		slog.Info("Error compiling regex", "error", err)
+		return
+	}
+
 	bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
 	for message := range bridge.CECConnection.Messages {
 		slog.Debug("Message", "message", message)
 		if !logOnly {
 			bridge.PublishMQTT("cec/message", message, false)
+		}
+		matches := regex.FindStringSubmatch(message)
+		if matches != nil {
+			prefix := matches[1]
+			hexPart := matches[2]
+			slog.Debug("CEC Message payload match", "prefix", prefix, "hex", hexPart)
+			if prefix == "<<" {
+				bridge.PublishMQTT("cec/message/hex/rx", hexPart, true)
+			} else if prefix == ">>" {
+				bridge.PublishMQTT("cec/message/hex/tx", hexPart, true)
+			}
 		}
 	}
 }
