@@ -161,11 +161,11 @@ func (bridge *CecMQTTBridge) onKeySend(client mqtt.Client, message mqtt.Message)
 	if err != nil {
 		slog.Error("Could not parse payload", "payload", string(message.Payload()))
 	}
-	address := payload["address"].(int)
+	address := payload["address"].(float64)
 	key := payload["key"].(string)
 	if key != "" {
 		bridge.PublishMQTT("cec/key/send", "", false)
 		slog.Debug("Sending key", "address", address, "key", key)
-		bridge.CECConnection.Key(address, key)
+		bridge.CECConnection.Key(int(address), key)
 	}
 }
