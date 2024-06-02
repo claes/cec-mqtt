@@ -53,7 +53,8 @@ func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *Ce
 	}
 
 	funcs := map[string]func(client mqtt.Client, message mqtt.Message){
-		"cec/key/send": bridge.onKeySend,
+		"cec/key/send":   bridge.onKeySend,
+		"cec/command/tx": bridge.onCommandSend,
 	}
 	for key, function := range funcs {
 		token := mqttClient.Subscribe(key, 0, function)
@@ -94,7 +95,7 @@ func (bridge *CecMQTTBridge) PublishCommands() {
 	bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
 	for command := range bridge.CECConnection.Commands {
 		slog.Debug("Create command", "command", command.CommandString)
-		bridge.PublishMQTT("cec/command", command.CommandString, false)
+		bridge.PublishMQTT("cec/command/rx", command.CommandString, false)
 	}
 }
 
@@ -148,6 +149,21 @@ func (bridge *CecMQTTBridge) PublishMessages(logOnly bool) {
 }
 
 var sendMutex sync.Mutex
+
+func (bridge *CecMQTTBridge) onCommandSend(client mqtt.Client, message mqtt.Message) {
+	sendMutex.Lock()
+	defer sendMutex.Unlock()
+
+	if "" == string(message.Payload()) {
+		return
+	}
+	command := string(message.Payload())
+	if command != "" {
+		bridge.PublishMQTT("cec/command/tx", "", false)
+		slog.Debug("Sending command", "command", command)
+		bridge.CECConnection.Transmit(command)
+	}
+}
 
 func (bridge *CecMQTTBridge) onKeySend(client mqtt.Client, message mqtt.Message) {
 	sendMutex.Lock()
