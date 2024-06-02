@@ -1,9 +1,11 @@
 package lib
 
 import (
+	"encoding/json"
 	"log/slog"
 	"regexp"
 	"strconv"
+	"sync"
 
 	cec "github.com/claes/cec"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -49,6 +51,15 @@ func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *Ce
 		MQTTClient:    mqttClient,
 		CECConnection: cecConnection,
 	}
+
+	funcs := map[string]func(client mqtt.Client, message mqtt.Message){
+		"cec/key/send": bridge.onKeySend,
+	}
+	for key, function := range funcs {
+		token := mqttClient.Subscribe(key, 0, function)
+		token.Wait()
+	}
+
 	bridge.initialize()
 	slog.Info("CEC MQTT bridge initialized")
 	return bridge
@@ -133,5 +144,28 @@ func (bridge *CecMQTTBridge) PublishMessages(logOnly bool) {
 				bridge.PublishMQTT("cec/message/hex/tx", hexPart, true)
 			}
 		}
+	}
+}
+
+var sendMutex sync.Mutex
+
+func (bridge *CecMQTTBridge) onKeySend(client mqtt.Client, message mqtt.Message) {
+	sendMutex.Lock()
+	defer sendMutex.Unlock()
+
+	if "" == string(message.Payload()) {
+		return
+	}
+	var payload map[string]interface{}
+	err := json.Unmarshal(message.Payload(), &payload)
+	if err != nil {
+		slog.Error("Could not parse payload", "payload", string(message.Payload()))
+	}
+	address := payload["address"].(int)
+	key := payload["key"].(string)
+	if key != "" {
+		bridge.PublishMQTT("cec/key/send", "", false)
+		slog.Debug("Sending key", "address", address, "key", key)
+		bridge.CECConnection.Key(address, key)
 	}
 }
