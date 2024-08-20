@@ -3,7 +3,7 @@ module github.com/claes/cec-mqtt
 go 1.21
 
 require (
-	github.com/claes/cec v0.0.0-20240813190404-a76b42f9c38e
+	github.com/claes/cec v0.0.0-20240820185959-6db0712de894
 	github.com/eclipse/paho.mqtt.golang v1.4.3
 )
 

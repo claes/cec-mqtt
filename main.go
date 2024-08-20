@@ -1,13 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
-	lib "github.com/claes/cec-mqtt/lib"
 	"log/slog"
 	"os"
 	"os/signal"
 	"time"
+
+	lib "github.com/claes/cec-mqtt/lib"
 )
 
 var debug *bool
@@ -49,10 +51,11 @@ func main() {
 	bridge := lib.NewCecMQTTBridge(lib.CreateCECConnection(*cecName, *cecDeviceName),
 		lib.CreateMQTTClient(*mqttBroker))
 
-	go bridge.PublishCommands()
-	go bridge.PublishKeyPresses()
-	go bridge.PublishSourceActivations()
-	go bridge.PublishMessages(true)
+	ctx := context.Background()
+	go bridge.PublishCommands(ctx)
+	go bridge.PublishKeyPresses(ctx)
+	go bridge.PublishSourceActivations(ctx)
+	go bridge.PublishMessages(ctx, true)
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

@@ -92,15 +92,7 @@ func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained 
 	token.Wait()
 }
 
-func (bridge *CecMQTTBridge) PublishCommands() {
-	bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
-	for command := range bridge.CECConnection.Commands {
-		slog.Debug("Create command", "command", command.CommandString)
-		bridge.PublishMQTT("cec/command/rx", command.CommandString, false)
-	}
-}
-
-func (bridge *CecMQTTBridge) PublishCommandsNew(ctx context.Context) {
+func (bridge *CecMQTTBridge) PublishCommands(ctx context.Context) {
 	bridge.CECConnection.Commands = make(chan *cec.Command, 10) // Buffered channel
 	for {
 		select {
@@ -114,28 +106,24 @@ func (bridge *CecMQTTBridge) PublishCommandsNew(ctx context.Context) {
 	}
 }
 
-func (bridge *CecMQTTBridge) PublishKeyPresses() {
+func (bridge *CecMQTTBridge) PublishKeyPresses(ctx context.Context) {
 	bridge.CECConnection.KeyPresses = make(chan *cec.KeyPress, 10) // Buffered channel
-	for keyPress := range bridge.CECConnection.KeyPresses {
-		slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
-		if keyPress.Duration == 0 {
-			bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress.KeyCode), false)
+
+	for {
+		select {
+		case <-ctx.Done():
+			slog.Info("PublishKeyPresses function is being cancelled")
+			return
+		case keyPress := <-bridge.CECConnection.KeyPresses:
+			slog.Debug("Key press", "keyCode", keyPress.KeyCode, "duration", keyPress.Duration)
+			if keyPress.Duration == 0 {
+				bridge.PublishMQTT("cec/key", strconv.Itoa(keyPress.KeyCode), false)
+			}
 		}
 	}
 }
 
-func (bridge *CecMQTTBridge) PublishSourceActivations() {
-	bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
-	for sourceActivation := range bridge.CECConnection.SourceActivations {
-		slog.Debug("Source activation",
-			"logicalAddress", sourceActivation.LogicalAddress,
-			"state", sourceActivation.State)
-		bridge.PublishMQTT("cec/source/"+strconv.Itoa(sourceActivation.LogicalAddress)+"/active",
-			strconv.FormatBool(sourceActivation.State), true)
-	}
-}
-
-func (bridge *CecMQTTBridge) PublishSourceActivationsNew(ctx context.Context) {
+func (bridge *CecMQTTBridge) PublishSourceActivations(ctx context.Context) {
 	bridge.CECConnection.SourceActivations = make(chan *cec.SourceActivation, 10) // Buffered channel
 
 	for {
@@ -153,35 +141,7 @@ func (bridge *CecMQTTBridge) PublishSourceActivationsNew(ctx context.Context) {
 	}
 }
 
-func (bridge *CecMQTTBridge) PublishMessages(logOnly bool) {
-	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
-	regex, err := regexp.Compile(pattern)
-	if err != nil {
-		slog.Info("Error compiling regex", "error", err)
-		return
-	}
-
-	bridge.CECConnection.Messages = make(chan string, 10) // Buffered channel
-	for message := range bridge.CECConnection.Messages {
-		slog.Debug("Message", "message", message)
-		if !logOnly {
-			bridge.PublishMQTT("cec/message", message, false)
-		}
-		matches := regex.FindStringSubmatch(message)
-		if matches != nil {
-			prefix := matches[1]
-			hexPart := matches[2]
-			slog.Debug("CEC Message payload match", "prefix", prefix, "hex", hexPart)
-			if prefix == "<<" {
-				bridge.PublishMQTT("cec/message/hex/rx", hexPart, true)
-			} else if prefix == ">>" {
-				bridge.PublishMQTT("cec/message/hex/tx", hexPart, true)
-			}
-		}
-	}
-}
-
-func (bridge *CecMQTTBridge) PublishMessagesNew(ctx context.Context, logOnly bool) {
+func (bridge *CecMQTTBridge) PublishMessages(ctx context.Context, logOnly bool) {
 
 	pattern := `^(>>|<<)\s([0-9A-Fa-f]{2}(?::[0-9A-Fa-f]{2})*)`
 	regex, err := regexp.Compile(pattern)

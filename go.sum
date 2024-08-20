@@ -1,5 +1,5 @@
-github.com/claes/cec v0.0.0-20240813190404-a76b42f9c38e h1:Mm7DDsTSiH92a4G1ILISBsxG4+ilwlbGmTf/JrTZfZo=
-github.com/claes/cec v0.0.0-20240813190404-a76b42f9c38e/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
+github.com/claes/cec v0.0.0-20240820185959-6db0712de894 h1:cZOiacVo+F8/VV+dEfqzNoqzbZVWiPbEDZ6rCKPK9uo=
+github.com/claes/cec v0.0.0-20240820185959-6db0712de894/go.mod h1:7MHv0D7vkFEFjZDDfdT4qnnJnKtB5VyN7gy5uRBfafw=
 github.com/eclipse/paho.mqtt.golang v1.4.3 h1:2kwcUGn8seMUfWndX0hGbvH8r7crgcJguQNCyp70xik=
 github.com/eclipse/paho.mqtt.golang v1.4.3/go.mod h1:CSYvoAlsMkhYOXh/oKyxa8EcBci6dVkLCbo5tTC1RIE=
 github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
