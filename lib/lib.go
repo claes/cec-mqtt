@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 
 	cec "github.com/claes/cec"
@@ -60,13 +61,21 @@ func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client, top
 		"cec/command/tx": bridge.onCommandSend,
 	}
 	for key, function := range funcs {
-		token := mqttClient.Subscribe(topicPrefix+"/"+key, 0, function)
+		token := mqttClient.Subscribe(prefixify(topicPrefix, key), 0, function)
 		token.Wait()
 	}
 
 	bridge.initialize()
 	slog.Info("CEC MQTT bridge initialized")
 	return bridge
+}
+
+func prefixify(topicPrefix, subtopic string) string {
+	if len(strings.TrimSpace(topicPrefix)) > 0 {
+		return topicPrefix + "/" + subtopic
+	} else {
+		return subtopic
+	}
 }
 
 func (bridge *CecMQTTBridge) initialize() {
@@ -90,7 +99,7 @@ func (bridge *CecMQTTBridge) initialize() {
 }
 
 func (bridge *CecMQTTBridge) PublishMQTT(subtopic string, message string, retained bool) {
-	token := bridge.MQTTClient.Publish(bridge.TopicPrefix+"/"+subtopic, 0, retained, message)
+	token := bridge.MQTTClient.Publish(prefixify(bridge.TopicPrefix, subtopic), 0, retained, message)
 	token.Wait()
 }
 
