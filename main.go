@@ -32,6 +32,7 @@ func main() {
 	cecName := flag.String("cecName", "/dev/ttyACM0", "CEC name")
 	cecDeviceName := flag.String("cecDeviceName", "CEC-MQTT", "CEC device name")
 	mqttBroker := flag.String("broker", "tcp://localhost:1883", "MQTT broker URL")
+	topicPrefix := flag.String("topicPrefix", "", "MQTT topic prefix")
 	help := flag.Bool("help", false, "Print help")
 	debug = flag.Bool("debug", false, "Debug logging")
 	flag.Parse()
@@ -49,7 +50,7 @@ func main() {
 	}
 
 	bridge := lib.NewCecMQTTBridge(lib.CreateCECConnection(*cecName, *cecDeviceName),
-		lib.CreateMQTTClient(*mqttBroker))
+		lib.CreateMQTTClient(*mqttBroker), *topicPrefix)
 
 	ctx := context.Background()
 	go bridge.PublishCommands(ctx)

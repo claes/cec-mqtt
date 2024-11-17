@@ -17,6 +17,7 @@ var debug *bool
 type CecMQTTBridge struct {
 	MQTTClient    mqtt.Client
 	CECConnection *cec.Connection
+	TopicPrefix   string
 }
 
 func CreateCECConnection(cecName, cecDeviceName string) *cec.Connection {
@@ -45,12 +46,13 @@ func CreateMQTTClient(mqttBroker string) mqtt.Client {
 	return client
 }
 
-func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *CecMQTTBridge {
+func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client, topicPrefix string) *CecMQTTBridge {
 
 	slog.Info("Creating CEC MQTT bridge")
 	bridge := &CecMQTTBridge{
 		MQTTClient:    mqttClient,
 		CECConnection: cecConnection,
+		TopicPrefix:   topicPrefix,
 	}
 
 	funcs := map[string]func(client mqtt.Client, message mqtt.Message){
@@ -58,7 +60,7 @@ func NewCecMQTTBridge(cecConnection *cec.Connection, mqttClient mqtt.Client) *Ce
 		"cec/command/tx": bridge.onCommandSend,
 	}
 	for key, function := range funcs {
-		token := mqttClient.Subscribe(key, 0, function)
+		token := mqttClient.Subscribe(topicPrefix+"/"+key, 0, function)
 		token.Wait()
 	}
 
@@ -87,8 +89,8 @@ func (bridge *CecMQTTBridge) initialize() {
 	}
 }
 
-func (bridge *CecMQTTBridge) PublishMQTT(topic string, message string, retained bool) {
-	token := bridge.MQTTClient.Publish(topic, 0, retained, message)
+func (bridge *CecMQTTBridge) PublishMQTT(subtopic string, message string, retained bool) {
+	token := bridge.MQTTClient.Publish(bridge.TopicPrefix+"/"+subtopic, 0, retained, message)
 	token.Wait()
 }
 
